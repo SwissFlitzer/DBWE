@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spritmonitor</title>
+    <!-- Lokales Bulma CSS einbinden -->
+    <link href="{{ url_for('static', filename='css/bulma.min.css') }}" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Navbar mit Logout-Button oben rechts -->
+    <nav class="navbar is-info">
+        <div class="navbar-end">
+            <div class="navbar-item">
+                <a href="{{ url_for('logout') }}" class="button is-danger">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section: Begrüßung -->
+    <section class="hero is-info">
+        <div class="hero-body">
+            <div class="container has-text-centered">
+                <h1 class="title is-1">
+                    Willkommen, {{ name }}
+                </h1>
+                <h2 class="subtitle is-3">
+                    Tracke deinen Spritverbrauch!
+                </h2>
+            </div>
+        </div>
+    </section>
+
+    <!-- Flash-Nachrichten unterhalb der Hero-Section -->
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="notifications">
+                    {% for category, message in messages %}
+                        <div class="notification is-{{ category }}">
+                            <button class="delete"></button>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container">
+        <h2 class="title is-2">Fahrzeugverbrauch</h2>
+
+        <!-- Formular zum Hinzufügen eines neuen Datensatzes -->
+        <form method="POST">
+            <div class="field">
+                <label class="label">Fahrzeugname</label>
+                <div class="control">
+                    <div class="select">
+                        <select name="car_name" required>
+                            <option value="" disabled selected>Wähle ein Fahrzeug</option>
+                            {% for car in car_names %}
+                            <option value="{{ car }}">{{ car }}</option>
+                            {% endfor %}
+                            <option value="other">Anderes Fahrzeug</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Wenn "Anderes Fahrzeug" gewählt wird, ein Textfeld für den Fahrzeugnamen (Javascript macht sichtbar) -->
+            <div class="field" id="new_car_name_field" style="display:none;">
+                <label class="label">Neuer Fahrzeugname</label>
+                <div class="control">
+                    <input class="input" type="text" name="new_car_name" placeholder="Gib den Namen des Fahrzeugs ein" maxlength="20" required>
+                </div>
+            </div>
+        
+            <div class="field">
+                <label class="label">Zurückgelegte Kilometer</label>
+                <div class="control">
+                    <input class="input" type="number" step="1" name="distance" max="9999" required>
+                </div>
+            </div>
+        
+            <div class="field">
+                <label class="label">Getanktes Volumen (in Litern)</label>
+                <div class="control">
+                    <input class="input" type="number" step="0.01" name="fuel" max="9999.99" required>
+                </div>
+            </div>
+        
+            <div class="field">
+                <div class="control">
+                    <button class="button is-link" type="submit">Daten hinzufügen</button>
+                </div>
+            </div>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+
+        <h3 class="title is-3">Fahrzeugstatistiken</h3>
+
+        <!-- Tabelle für Fahrzeugverbrauch und Durchschnitt -->
+        <table class="table is-striped is-fullwidth">
+            <thead>
+                <tr>
+                    <th>Fahrzeug</th>
+                    <th>Gesamt km</th>
+                    <th>Gesamt Sprit (L)</th>
+                    <th>Durchschnittlicher Verbrauch (L/100km)</th>
+                    <th>Aktionen</th> <!-- Neue Spalte für Aktionen -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for car, stats in car_summary.items() %}
+                <tr>
+                    <td>{{ car }}</td>
+                    <td>{{ stats['distance'] }}</td>
+                    <td>{{ stats['fuel'] }}</td>
+                    <td>{{ stats['average_consumption']|round(2) }}</td>
+                    <td>
+                        <!-- Lösch-Button -->
+                        <form action="{{ url_for('delete_car', car_name=car) }}" method="POST" style="display:inline;">
+                            <button class="button is-danger is-small" type="submit" onclick="return confirm('Möchtest du dieses Fahrzeug wirklich löschen?')">Löschen</button>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- JavaScript, um das Textfeld für den Fahrzeugnamen zu zeigen, wenn "Anderes Fahrzeug" gewählt wird  + Weglicken von Meldungen-->
+    <script>
+        document.querySelector('select[name="car_name"]').addEventListener('change', function() {
+            var newCarField = document.getElementById('new_car_name_field');
+            var newCarInput = newCarField.querySelector('input[name="new_car_name"]');
+
+        if (this.value === 'other') {
+            newCarField.style.display = 'block'; // Zeige das Feld an
+            newCarInput.setAttribute('required', 'required'); // Füge "required" hinzu
+        } else {
+            newCarField.style.display = 'none'; // Verstecke das Feld
+            newCarInput.removeAttribute('required'); // Entferne "required"
+        }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+      // Alle Schließ-Buttons für Notifications finden
+      const deleteButtons = document.querySelectorAll('.notification .delete');
+
+      deleteButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          // Das übergeordnete Element (die Notification) wird entfernt
+          this.parentElement.remove();
+        });
+        // Zusätzlich: Benachrichtigung nach 10 Sekunden automatisch entfernen, falls nicht vorher geschlossen
+      setTimeout(function() {
+        // Überprüfen, ob die Benachrichtigung noch existiert
+        const notification = button.closest('.notification');
+        if (notification) {
+          notification.remove(); // Entfernen der Benachrichtigung nach 10 Sekunden
+        }
+      }, 10000); // 10000 Millisekunden = 10 Sekunden
+      });
+    });
+    </script>
+</body>
+</html>

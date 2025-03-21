@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrierung</title>
+    <link href="{{ url_for('static', filename='css/bulma.min.css') }}" rel="stylesheet">
+</head>
+<body>
+    <section class="hero is-info">
+        <div class="hero-body">
+            <div class="container has-text-centered">
+                <h1 class="title is-1">
+                    Benutzerregistrierung
+                </h1>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="columns is-centered">
+            <div class="column is-4">
+                <!-- Flash-Nachrichten anzeigen -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="notifications">
+                            {% for category, message in messages %}
+                                <div class="notification is-{{ category }}">
+                                    <button class="delete"></button>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                <form method="POST" action="{{ url_for('register') }}">
+                    <div class="field">
+                        <label class="label">Benutzername</label>
+                        <div class="control">
+                            <input class="input" type="text" name="username" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Passwort</label>
+                        <div class="control">
+                            <input class="input" type="password" name="password" minlength="10" required>
+                        </div>
+                        <p class="help">Das Passwort muss mindestens 10 Zeichen lang sein.</p>
+                    </div>
+                    <div class="field">
+                        <div class="control">
+                            <button class="button is-link is-fullwidth" type="submit">Registrieren</button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+                <!-- Separator zwischen buttons -->
+                <div class="field is-horizontal">
+                    <div class="field-label"></div>
+                    <div class="field-body">
+                        <div class="field is-12">
+                            <hr class="my-4"> <!-- Horizontale Linie -->
+                        </div>
+                    </div>
+                </div>
+                <!-- Login Button -->
+                <div class="field">
+                    <p class="control">
+                        <a href="{{ url_for('login') }}" class="button is-warning is-fullwidth">Bereits registriert? Jetzt einloggen!</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- JavaScript, um Meldungen wegzuklicken-->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+      // Alle Schliess-Buttons für Notifications finden
+      const deleteButtons = document.querySelectorAll('.notification .delete');
+
+      deleteButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          // Das übergeordnete Element (die Notification) wird entfernt
+          this.parentElement.remove();
+        });
+      });
+    });
+    </script>
+</body>
+</html>
